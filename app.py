@@ -59,7 +59,7 @@ st.caption("An AI-powered Design Thinking companion")
 
 def load_dt_tool():
     for stage in DT_STAGES:
-        st.session_state[f"gpt_results_{stage}"] = query_gpt4(generate_dt_prompt("EMPATHISE"))
+        st.session_state[f"gpt_results_{stage}"] = query_gpt4(generate_dt_prompt(stage))
     st.session_state['generated'] = 1
     st.experimental_rerun()
 

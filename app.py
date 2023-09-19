@@ -3,7 +3,17 @@ import extra_streamlit_components as stx
 from streamlit_option_menu import option_menu
 from fpdf import FPDF
 import base64
-from utils.pdf import create_download_link, split_text, multi_cell
+from utils.pdf import sanitise_text, multi_cell, create_download_link
+from utils.clarifai import query_gpt4
+from utils.prompts import generate_dt_prompt
+
+def find_non_encodable_characters(text):
+    for char in text:
+        try:
+            char.encode('latin-1')
+        except UnicodeEncodeError:
+            st.write(f"Cannot encode character: {char} (U+{ord(char):04X})")
+
 
 ##########
 st.set_page_config(
@@ -41,9 +51,17 @@ nav_emoji = {
     "Prototype": "🔧",
     "Test": "✅"}
 
+DT_STAGES = ["EMPATHISE", "DEFINE", "IDEATE", "PROTOTYPE", "TEST"]
+
 ##########
 st.markdown("# Design:violet[AI]d")
 st.caption("An AI-powered Design Thinking companion")
+
+def load_dt_tool():
+    for stage in DT_STAGES:
+        st.session_state[f"gpt_results_{stage}"] = query_gpt4(generate_dt_prompt("EMPATHISE"))
+    st.session_state['generated'] = 1
+    st.experimental_rerun()
 
 ##########
 if st.session_state['generated'] == 0:
@@ -64,8 +82,8 @@ if st.session_state['generated'] == 0:
         if btn_generate & (not st.session_state['autofilled']):
             colA.error("Please click 'Autofill'")
         elif btn_generate & st.session_state['autofilled']:
-            st.session_state['generated'] = 1
-            st.experimental_rerun()
+            with st.spinner('Please give me about 3-5 mins to think about your project...'):
+                load_dt_tool()
 
     col1, col2 = st.columns(2)
     col1.markdown("#### Please fill up the below")
@@ -92,11 +110,11 @@ if st.session_state['generated'] == 0:
     if pressed & (q1 == "" or q2 == "" or q3 =="" or q4 ==""):
             st.error("Please complete fill up q1 to q4.")
     elif pressed:
-            st.session_state['generated'] = 1
-            st.experimental_rerun()
+        with st.spinner('Please give me some time to think...'):
+            load_dt_tool()
 
 
-else:
+elif st.session_state['generated'] == 1:
     tab1, tab2, tab3, tab4 = st.tabs(["Results", "Download Report", "Your Input", "Restart"])    
 
     with tab1:
@@ -112,15 +130,15 @@ else:
         with col2: 
             st.markdown(f"## {nav_emoji[selected_step]} {selected_step}")
             if (st.session_state['menu_option'] == 0) or (selected_step == "Empathise"):
-                st.info("A")
+                st.info(st.session_state[f'gpt_results_{selected_step.upper()}'])
             elif (st.session_state['menu_option'] == 1) or (selected_step == "Define"):
-                st.info("B")
+                st.info(st.session_state[f'gpt_results_{selected_step.upper()}'])
             elif (st.session_state['menu_option'] == 2) or (selected_step == "Ideate"):
-                st.info("C")
+                st.info(st.session_state[f'gpt_results_{selected_step.upper()}'])
             elif (st.session_state['menu_option'] == 3) or (selected_step == "Prototype"):
-                st.info("D")
+                st.info(st.session_state[f'gpt_results_{selected_step.upper()}'])
             elif (st.session_state['menu_option'] == 4) or (selected_step == "Test"):
-                st.info("E")
+                st.info(st.session_state[f'gpt_results_{selected_step.upper()}'])
             st.button("Next", key='fwd_btn')
     
     with tab2:
@@ -138,10 +156,17 @@ else:
 
             for qn_num, demo_val in enumerate(demo_values):
                 value = st.session_state.get(demo_val, "")
-                multi_cell(pdf, 160, 10, f"Q{qn_num+1}: {value}", 'Arial', '', 12)
-                multi_cell(pdf, 160, 10, "", 'Arial', '', 12)
+                multi_cell(pdf, 160, 10, f"Q{qn_num+1}: {value}", 'Arial', '', 11)
+                multi_cell(pdf, 160, 10, "", 'Arial', '', 11)
+
+            for stage_num, stage in enumerate(DT_STAGES):
+                pdf.add_page()
+                multi_cell(pdf, 160, 10, f"Stage {stage_num+1}: {stage}", 'Arial', 'U', 14)  # 190 is nearly the width of an A4 paper
+                results = st.session_state[f'gpt_results_{stage}']
+                multi_cell(pdf, 160, 10, sanitise_text(results), 'Arial', '', 11)  # 190 is nearly the width of an A4 paper
 
             html = create_download_link(pdf.output(dest="S").encode("latin-1"), "report")
+            st.toast('Your report has been generated!', icon='😍')
 
             st.markdown(html, unsafe_allow_html=True)
 

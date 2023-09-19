@@ -1,9 +1,8 @@
-from fpdf import FPDF
+from fpdf.fpdf import FPDF
 import base64
 
-def create_download_link(val, filename):
-    b64 = base64.b64encode(val)  # val looks like b'...'
-    return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{filename}.pdf">Download file</a>'
+def sanitise_text(text):
+    return text.encode('latin-1', 'replace').decode('latin-1')
 
 def split_text(pdf, text, width):
     """Split a text string into chunks that each have a width less than the specified width."""
@@ -33,3 +32,7 @@ def multi_cell(pdf, w, h, txt, font_family, font_style, font_size, border=0, ali
     
     for line in lines:
         pdf.cell(w, h, line, border, 1, align, fill)
+
+def create_download_link(val, filename):
+    b64 = base64.b64encode(val)  # val looks like b'...'
+    return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{filename}.pdf">Download file</a>'

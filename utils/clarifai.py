@@ -5,6 +5,7 @@ from clarifai_grpc.grpc.api.status import status_code_pb2
 
 PAT = st.secrets["clarifai_pat"]
 
+@st.cache_resource(show_spinner=False)
 def moderate_input(text):
 
     USER_ID = 'clarifai'
@@ -49,6 +50,7 @@ def moderate_input(text):
     
     return [False, None, None]
 
+@st.cache_resource(show_spinner=False)
 def query_gpt4(prompt):
 
     USER_ID = 'openai'
@@ -90,6 +92,7 @@ def query_gpt4(prompt):
     reply = output.data.text.raw
     return reply
 
+@st.cache_resource(show_spinner=False)
 def query_SDXL(prompt):
         
     USER_ID = "stability-ai"

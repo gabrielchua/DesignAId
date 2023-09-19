@@ -2,7 +2,7 @@ from fpdf.fpdf import FPDF
 import base64
 
 def sanitise_text(text):
-    return text.encode('utf-8', 'replace').decode('utf-8'
+    return text.encode('utf-8', 'replace').decode('utf-8')
                                                   
 def split_text(pdf, text, width):
     """Split a text string into chunks that each have a width less than the specified width."""

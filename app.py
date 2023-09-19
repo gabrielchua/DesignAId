@@ -147,7 +147,6 @@ elif st.session_state['generated'] == 1:
             pdf.set_left_margin(20)  # Set left margin to 20mm (or whatever value you desire)
             pdf.set_top_margin(20)   # Set top margin to 30mm (or whatever value you desire)
             pdf.add_page()
-            # pdf.set_font('Arial', 'B', 16)
 
             # Add long text with automatic line breaks
             multi_cell(pdf, 160, 10, "Your Report", 'Arial', 'B', 16)  # 190 is nearly the width of an A4 paper
@@ -165,13 +164,11 @@ elif st.session_state['generated'] == 1:
                 results = st.session_state[f'gpt_results_{stage}']
                 multi_cell(pdf, 160, 10, sanitise_text(results), 'Arial', '', 11)  # 190 is nearly the width of an A4 paper
 
-            html = create_download_link(pdf.output(dest="S").encode("latin-1"), "report")
+            html = create_download_link(pdf.output(dest="S"), "report")
+
             st.toast('Your report has been generated!', icon='😍')
 
             st.markdown(html, unsafe_allow_html=True)
-
-            # report_text = "hello world"
-            # st.download_button("Download Report", "example.csv")
 
     with tab3:
         col3, col4 = st.columns(2)
@@ -188,39 +185,3 @@ elif st.session_state['generated'] == 1:
         if st.button("Restart"):
             st.session_state['generated'] = 0
             st.experimental_rerun()
-
-# st.divider()
-
-# # Initialize chat history
-# if "messages" not in st.session_state:
-#     st.session_state.messages = []
-
-# # Display chat messages from history on app rerun
-# for message in st.session_state.messages:
-#     with st.chat_message(message["role"]):
-#         st.markdown(message["content"])
-
-# # Accept user input
-# if prompt := st.chat_input("What is up?"):
-#     # Add user message to chat history
-#     st.session_state.messages.append({"role": "user", "content": prompt})
-#     # Display user message in chat message container
-#     with st.chat_message("user"):
-#         st.markdown(prompt)
-#     # Display assistant response in chat message container
-#     with st.chat_message("assistant"):
-#         message_placeholder = st.empty()
-#         full_response = ""
-
-#############
-# annotated_text(
-#     "An ",
-#     ("AI", "", "#8ef"),
-#     "-powered",
-#     ("Design Thinking", "", "#afa") ,
-#     " companion 🧑‍🎨")
-
-
-# parameters.SHOW_LABEL_SEPARATOR = False
-# parameters.BORDER_RADIUS = 0
-# parameters.PADDING = "0 0.3rem"

@@ -162,7 +162,7 @@ elif st.session_state['generated'] == 1:
                 pdf.add_page()
                 multi_cell(pdf, 160, 10, f"Stage {stage_num+1}: {stage}", 'Arial', 'U', 14)  # 190 is nearly the width of an A4 paper
                 results = st.session_state[f'gpt_results_{stage}']
-                multi_cell(pdf, 160, 10, sanitise_text(results), 'Arial', '', 11)  # 190 is nearly the width of an A4 paper
+                multi_cell(pdf, 160, 10, results, 'Arial', '', 11)  # 190 is nearly the width of an A4 paper
 
             html = create_download_link(pdf.output(dest="S"), "report")
 

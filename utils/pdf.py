@@ -25,7 +25,7 @@ def split_text(pdf, text, width):
 
     return lines
 
-def multi_cell(pdf, w, h, txt, font_family, font_style, font_size, border=0, align='J', fill=False):
+def multi_cell(pdf, w, h, txt, font_family, font_style, font_size, border=0, align='L', fill=False):
     """Handle text wrapping for the FPDF library with custom font settings."""
     pdf.set_font(font_family, font_style, font_size)
     lines = split_text(pdf, txt, w)

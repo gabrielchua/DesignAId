@@ -77,7 +77,7 @@ if st.session_state['generated'] == 0:
     # Autofill
     with st.expander("Demo Quick Start"):
         st.write("For the purposes of this demo, we can autofill the fields below.")
-        colA, colB, colC, _ = st.columns((1,1,1.3,12))
+        colA, colB, colC, _ = st.columns(3)
         
         if colA.button("Autofill"):
             st.session_state['q1_default_val'] = "I'm a Product Designer with a focus on developing assistive technology tools to enhance the daily lives of individuals with disabilities."

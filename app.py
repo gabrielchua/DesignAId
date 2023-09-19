@@ -1,19 +1,13 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import extra_streamlit_components as stx
 from streamlit_option_menu import option_menu
 from fpdf import FPDF
 import base64
+from utils.flowchart import mermaid
 from utils.pdf import sanitise_text, multi_cell, create_download_link
-from utils.clarifai import query_gpt4
-from utils.prompts import generate_dt_prompt
-
-def find_non_encodable_characters(text):
-    for char in text:
-        try:
-            char.encode('latin-1')
-        except UnicodeEncodeError:
-            st.write(f"Cannot encode character: {char} (U+{ord(char):04X})")
-
+from utils.clarifai import query_gpt4, query_SDXL, moderate_input
+from utils.prompts import generate_dt_prompt, generate_prototype_img_prompt, generate_user_journey_prompt
 
 ##########
 st.set_page_config(
@@ -22,6 +16,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="auto"
 )
+
+##########
 
 if 'menu_option' not in st.session_state:
     st.session_state['menu_option'] = 0
@@ -33,7 +29,7 @@ if 'autofilled' not in st.session_state:
     st.session_state['autofilled'] = False
 
 if st.session_state.get('fwd_btn', False):
-    st.session_state['menu_option'] = (st.session_state.get('menu_option',0) + 1) % 5
+    st.session_state['menu_option'] = (st.session_state.get('menu_option', 0) + 1) % 5
     manual_select = st.session_state['menu_option']
 else:
     manual_select = None
@@ -57,18 +53,32 @@ DT_STAGES = ["EMPATHISE", "DEFINE", "IDEATE", "PROTOTYPE", "TEST"]
 st.markdown("# Design:violet[AI]d")
 st.caption("An AI-powered Design Thinking companion")
 
+# testing_mode = st.toggle('Testing Mode')
+testing_mode = False
+
 def load_dt_tool():
     for stage in DT_STAGES:
-        st.session_state[f"gpt_results_{stage}"] = query_gpt4(generate_dt_prompt(stage))
+        st.session_state[f"gpt_results_{stage}"] = query_gpt4(generate_dt_prompt(stage, testing=testing_mode))
+
+def render_dt_page():
     st.session_state['generated'] = 1
     st.experimental_rerun()
+
+def nsfw(text):        
+    results = moderate_input(text)
+    if results[0] == True:
+        st.toast(f"Moderation flag: {results[1]} ({results[2]})", icon='⚠️')
+        return 1
+    return 0
 
 ##########
 if st.session_state['generated'] == 0:
 
+    # Autofill
     with st.expander("Demo Quick Start"):
         st.write("For the purposes of this demo, we can autofill the fields below.")
-        colA, colB, _ = st.columns((2,2,10))
+        colA, colB, colC, _ = st.columns((1,1,1.3,10))
+        
         if colA.button("Autofill"):
             st.session_state['q1_default_val'] = "I'm a Product Designer with a focus on developing assistive technology tools to enhance the daily lives of individuals with disabilities."
             st.session_state['q2_default_val'] = "Our primary target audience includes individuals with physical impairments, specifically those who have mobility challenges. This ranges from elderly individuals with reduced dexterity to younger individuals who might have been born with or acquired physical limitations."
@@ -78,13 +88,27 @@ if st.session_state['generated'] == 0:
             st.session_state['q6_default_val'] = "Yes, but they were often too specialized, expensive, or lacked aesthetics and durability."
             st.session_state['q7_default_val'] = "Increased user independence, high adoption rates, and positive user feedback indicating enhanced daily living."
             st.session_state['autofilled'] = True
-        btn_generate = colB.button("Generate Now")
+        
+        if colB.button("Clear"):
+            for i in range(1, 8):
+                st.session_state[f'q{i}_default_val'] = ""
+
+        btn_generate = colC.button("Generate Now")
         if btn_generate & (not st.session_state['autofilled']):
             colA.error("Please click 'Autofill'")
         elif btn_generate & st.session_state['autofilled']:
-            with st.spinner('Please give me about 3-5 mins to think about your project...'):
-                load_dt_tool()
 
+            failed = 0
+            for q_num in range(1, 8):
+                failed += nsfw(st.session_state[f'q{q_num}_default_val'])
+
+            if failed == 0:
+                with st.spinner('Please give me about 3-5 mins to think about your project...'):
+                    load_dt_tool()
+                    render_dt_page()
+
+
+    # Form
     col1, col2 = st.columns(2)
     col1.markdown("#### Please fill up the below")
     q1 = col1.text_area("Q1: What is your role?", 
@@ -102,17 +126,24 @@ if st.session_state['generated'] == 0:
                         value=f"{st.session_state['q6_default_val']}")
     q7 = col2.text_area("Q7: What does success look like?",
                         value=f"{st.session_state['q7_default_val']}")
-    q8_file = col2.file_uploader("Q8: Upload any available user interviews")
-    st.session_state["user_inputs"] = [q1, q2, q3, q4, q5, q6, q7, q8_file]
+    # q8_file = col2.file_uploader("Q8: Upload any available user interviews")
+    st.session_state["user_inputs"] = [q1, q2, q3, q4, q5, q6, q7]
     
     st.divider()
     pressed = st.button("Generate")
     if pressed & (q1 == "" or q2 == "" or q3 =="" or q4 ==""):
             st.error("Please complete fill up q1 to q4.")
     elif pressed:
-        with st.spinner('Please give me some time to think...'):
-            load_dt_tool()
+        failed = 0
 
+        for inputs in st.session_state["user_inputs"]:
+            failed += nsfw(inputs)
+
+        if failed == 0:
+            with st.spinner('Please give me some time to think...'):
+                load_dt_tool()
+                render_dt_page()
+                st.balloons()
 
 elif st.session_state['generated'] == 1:
     tab1, tab2, tab3, tab4 = st.tabs(["Results", "Download Report", "Your Input", "Restart"])    
@@ -127,19 +158,47 @@ elif st.session_state['generated'] == 1:
                 manual_select=manual_select,
                 key='menu_4')
             
+            if selected_step == "Empathise":
+                st.session_state['menu_option'] = 0 
+            elif selected_step == "Define":
+                st.session_state['menu_option'] = 1
+            elif selected_step == "Ideate":
+                st.session_state['menu_option'] = 2 
+            elif selected_step == "Prototype":
+                st.session_state['menu_option'] = 3 
+            elif selected_step == "Test":
+                st.session_state['menu_option'] = 4 
+
         with col2: 
             st.markdown(f"## {nav_emoji[selected_step]} {selected_step}")
+            if (st.session_state['menu_option'] != 4) or (selected_step != "Test"):
+                st.button("Next Stage >>", key='fwd_btn')
+
             if (st.session_state['menu_option'] == 0) or (selected_step == "Empathise"):
                 st.info(st.session_state[f'gpt_results_{selected_step.upper()}'])
+                if st.button("Generate user journey"):
+                    user_journey = query_gpt4(generate_user_journey_prompt())
+                    mermaid(user_journey)
+
             elif (st.session_state['menu_option'] == 1) or (selected_step == "Define"):
                 st.info(st.session_state[f'gpt_results_{selected_step.upper()}'])
             elif (st.session_state['menu_option'] == 2) or (selected_step == "Ideate"):
                 st.info(st.session_state[f'gpt_results_{selected_step.upper()}'])
             elif (st.session_state['menu_option'] == 3) or (selected_step == "Prototype"):
-                st.info(st.session_state[f'gpt_results_{selected_step.upper()}'])
+                col2a, col2b = st.columns(2)
+                col2a.info(st.session_state[f'gpt_results_{selected_step.upper()}'])
+                col2b.markdown("**Generate Mock-Up** ")
+                if col2b.button("Generate"):
+                    with st.spinner("Generating image"):
+                        st.toast('Generating your image...', icon='🏃')    
+                        img_prompt = query_gpt4(generate_prototype_img_prompt(testing=testing_mode))
+                        image = query_SDXL(img_prompt)
+                        st.session_state[f'generated_image'] = image
+                        col2b.image(image.base64)
+                        st.toast('Your mock-ups have been generated!', icon='😍')                   
             elif (st.session_state['menu_option'] == 4) or (selected_step == "Test"):
                 st.info(st.session_state[f'gpt_results_{selected_step.upper()}'])
-            st.button("Next", key='fwd_btn')
+            
     
     with tab2:
         if st.button("Generate Report"):

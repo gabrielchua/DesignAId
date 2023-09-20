@@ -137,7 +137,14 @@ if st.session_state['generated'] == 0:
                     with open("sample-data/user_comments.json", 'r') as json_file:
                         q8_file = json.load(json_file)
 
-                    st.session_state["user_inputs"] = [None, None, None, None, None, None, None, q8_file]
+                    st.session_state["user_inputs"] = [st.session_state['q1_default_val'],
+                                                       st.session_state['q2_default_val'],
+                                                       st.session_state['q3_default_val'], 
+                                                       st.session_state['q4_default_val'], 
+                                                       st.session_state['q5_default_val'], 
+                                                       st.session_state['q6_default_val'], 
+                                                       st.session_state['q7_default_val']
+                                                       , q8_file]
                     load_dt_tool()
                     render_dt_page()
 

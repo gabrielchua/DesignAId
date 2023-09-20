@@ -30,6 +30,9 @@ An AI-powered application to assist in design thinking using the power of large 
 - extra_streamlit_components
 - streamlit_option_menu
 - fpdf
+- langchain
+- weaviate
+- clarifai
 
 ## Setup
 

@@ -81,4 +81,4 @@ def clear_weviate():
     }
     )
         
-    client.batch.delete_objects(class_name='EphemeralObject')
+    client.batch.delete_objects(class_name='Question')

@@ -2,12 +2,16 @@ import streamlit as st
 import streamlit.components.v1 as components
 import extra_streamlit_components as stx
 from streamlit_option_menu import option_menu
+
+from datetime import datetime
+import json
 from fpdf import FPDF
 import base64
 from utils.flowchart import mermaid
 from utils.pdf import sanitise_text, multi_cell, create_download_link
 from utils.clarifai import query_gpt4, query_SDXL, moderate_input
-from utils.prompts import generate_dt_prompt, generate_prototype_img_prompt, generate_user_journey_prompt
+from utils.prompts import generate_dt_prompt, generate_prototype_img_prompt, generate_user_journey_prompt, generate_interview_prompt
+from utils.weaviate import load_data_to_weaviate, query_weaviate, clear_weviate
 
 from langchain.llms import Clarifai
 from langchain.prompts import PromptTemplate
@@ -35,6 +39,13 @@ if 'generated' not in st.session_state:
 if 'autofilled' not in st.session_state:
     st.session_state['autofilled'] = False
 
+if 'persona_loaded' not in st.session_state:
+    st.session_state["persona_loaded"] = False
+
+
+st.session_state["session_id"] = datetime.now().strftime('%H:%M:%S')
+
+
 if st.session_state.get('fwd_btn', False):
     st.session_state['menu_option'] = (st.session_state.get('menu_option', 0) + 1) % 5
     manual_select = st.session_state['menu_option']
@@ -57,7 +68,7 @@ nav_emoji = {
 DT_STAGES = ["EMPATHISE", "DEFINE", "IDEATE", "PROTOTYPE", "TEST"]
 
 ##########
-st.markdown("# Design:violet[AI]d")
+st.markdown("# Design:rainbow[AI]d")
 st.caption("An AI-powered Design Thinking companion")
 
 # testing_mode = st.toggle('Testing Mode')
@@ -84,7 +95,7 @@ if st.session_state['generated'] == 0:
 
     # Autofill
     with st.expander("Demo Quick Start"):
-        st.write("For the purposes of this demo, we can autofill the fields below.")
+        st.write("For the purposes of this demo, we can autofill the fields below. Please also download the sample user comments")
         colA, colB, colC, _ = st.columns(4)
         
         if colA.button("Autofill"):
@@ -99,6 +110,13 @@ if st.session_state['generated'] == 0:
 
             st.session_state["user_inputs"] = [st.session_state[f'q{i}_default_val'] for i in range(1, 8)]
         
+        with open("sample-data/user_comments.json", "rb") as file:
+            btn = st.download_button(
+                label="Download Sample",
+                data=file,
+                file_name="user_comments.json",
+          )
+
         if colB.button("Clear"):
             for i in range(1, 8):
                 st.session_state[f'q{i}_default_val'] = ""
@@ -108,12 +126,18 @@ if st.session_state['generated'] == 0:
             colA.error("Please click 'Autofill'")
         elif btn_generate & st.session_state['autofilled']:
 
-            failed = 0
-            for q_num in range(1, 8):
-                failed += nsfw(st.session_state[f'q{q_num}_default_val'])
+            with st.spinner("Checking your answers..."):
+                failed = 0
+                for q_num in range(1, 8):
+                    failed += nsfw(st.session_state[f'q{q_num}_default_val'])
 
             if failed == 0:
                 with st.spinner('Starting up my enginges. Please give me about 3 mins to think about your project...'):
+
+                    with open("sample-data/user_comments.json", 'r') as json_file:
+                        q8_file = json.load(json_file)
+
+                    st.session_state["user_inputs"] = [None, None, None, None, None, None, None, q8_file]
                     load_dt_tool()
                     render_dt_page()
 
@@ -137,17 +161,19 @@ if st.session_state['generated'] == 0:
     q7 = col2.text_area("Q7: What does success look like?",
                         value=f"{st.session_state['q7_default_val']}")
     q8_file = col2.file_uploader("Q8: Upload any available user interviews")
-    st.session_state["user_inputs"] = [q1, q2, q3, q4, q5, q6, q7, q8]
+    st.session_state["user_inputs"] = [q1, q2, q3, q4, q5, q6, q7, q8_file]
     
     st.divider()
     pressed = st.button("Generate")
     if pressed & (q1 == "" or q2 == "" or q3 =="" or q4 ==""):
             st.error("Please complete fill up q1 to q4.")
     elif pressed:
-        failed = 0
+        with st.spinner("Checking your answers..."):
 
-        for inputs in st.session_state["user_inputs"]:
-            failed += nsfw(inputs)
+            failed = 0
+
+            for inputs in st.session_state["user_inputs"][:7]:
+                failed += nsfw(inputs)
 
         if failed == 0:
             with st.spinner('Starting up my enginges. Please give me about 3 mins to think about your project...'):
@@ -225,6 +251,13 @@ elif st.session_state['generated'] == 1:
                     st.session_state[f"gpt_results_{selected_step_UPPER}"] = query_gpt4(generate_dt_prompt(selected_step_UPPER, testing=testing_mode))
                     st.info(st.session_state[f'gpt_results_{selected_step.upper()}'])
 
+
+
+
+
+
+
+
     with tab2:
         if st.button("Generate user journey"):
             with st.spinner("Please give me some time to draw 🙏 ..."):
@@ -232,16 +265,45 @@ elif st.session_state['generated'] == 1:
                 mermaid(user_journey_prompt)
                 st.toast('Your user journey has been generated!', icon='😍')
 
+
+
+
+
+
+
+
+
     with tab3:
         col3_1, col3_2 = st.columns((5, 8))
-        question_list = []
-        question_asked = col3_1.text_area("What do you want to ask?")
-        question_list.append(question_asked)
+        col3_1.markdown("## Interview your virtual persona")
 
-        if col3_1.button("Ask"):
-            question_to_reply = question_list[-1]
-            col3_2.info(f"**QN**: {question_asked}")
-            col3_2.success(f"**ANS**: {query_gpt4(question_asked)}")
+        if st.session_state["persona_loaded"] == False:
+            if col3_1.button("Load"):
+                with st.spinner("Loading your persona..."):
+                    load_data_to_weaviate(st.session_state["user_inputs"][-1])
+                    st.session_state["persona_loaded"] = True
+
+        if 'question_list' not in st.session_state:
+            st.session_state['question_list'] = []
+        question_asked = col3_1.text_area("What do you want to ask?")
+        st.session_state['question_list'].append(question_asked)
+
+        if len(st.session_state['question_list']) > 1:
+            col3_1.markdown("**Your Previous Qns**")
+            for qn in st.session_state['question_list']:
+                if qn != "":
+                    col3_1.markdown(f"* {qn}")
+
+        if question_asked != "":
+            question_to_reply = st.session_state['question_list'][-1]
+            col3_2.info(f"**QN**: {question_to_reply}")
+            user_context = query_weaviate(question_to_reply)
+            col3_2.success(f"**ANS**: {query_gpt4(generate_interview_prompt(question_to_reply, user_context))}")
+
+
+
+
+
 
 
     with tab4:
@@ -284,6 +346,11 @@ elif st.session_state['generated'] == 1:
                 
                 st.markdown(html, unsafe_allow_html=True)
 
+
+
+
+
+
     with tab5:
         col3, col4 = st.columns(2)
         col3.markdown(f"**What is your role:** {st.session_state['user_inputs'][0]}")
@@ -294,8 +361,15 @@ elif st.session_state['generated'] == 1:
         col4.markdown(f"**Have there been previous attempts:** {st.session_state['user_inputs'][5]}")
         col4.markdown(f"**What does success look like:** {st.session_state['user_inputs'][6]}")
 
+
+
+
+
+
+
     with tab6:
         st.error("⚠️ This step is not reversible ⚠️")
         if st.button("Restart"):
             st.session_state['generated'] = 0
+            # clear_weviate()
             st.experimental_rerun()

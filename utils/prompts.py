@@ -81,3 +81,23 @@ def generate_user_journey_prompt():
         """
     
     return prompt
+
+
+def generate_interview_prompt(question, context):
+
+    prompt = f"""
+
+    This is for a design thinking interview.
+
+    Pretend you are being interviewed by a UX researcher. You have been asked: {question}
+
+    You are to base your reply based on the following real-world user comments: {context}
+
+    You can make up some examples, including stories.
+
+    Sound causal and polite. Answer as though you are speaking from the perspective of a user.
+
+
+    """
+
+    return prompt

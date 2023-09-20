@@ -70,7 +70,7 @@ def generate_user_journey_prompt():
 
         We are now at the EMPATHIZE stage. 
 
-        Generate a possible user journey for the USER.
+        Generate a possible user journey for a possible interviee who would describe their challenges.
 
         Format your reply as mermaid javascript.
 

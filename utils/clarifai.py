@@ -1,4 +1,8 @@
 import streamlit as st
+from langchain.llms import Clarifai
+from langchain.prompts import PromptTemplate
+from langchain.chains import LLMChain
+
 from clarifai_grpc.channel.clarifai_channel import ClarifaiChannel
 from clarifai_grpc.grpc.api import resources_pb2, service_pb2, service_pb2_grpc
 from clarifai_grpc.grpc.api.status import status_code_pb2
@@ -51,45 +55,60 @@ def moderate_input(text):
     return [False, None, None]
 
 @st.cache_resource(show_spinner=False)
-def query_gpt4(prompt):
+def query_gpt4(text_input):
 
     USER_ID = 'openai'
     APP_ID = 'chat-completion'
     MODEL_ID = 'GPT-4'
-    MODEL_VERSION_ID = 'ad16eda6ac054796bf9f348ab6733c72'
 
-    channel = ClarifaiChannel.get_grpc_channel()
-    stub = service_pb2_grpc.V2Stub(channel)
+    # MODEL_VERSION_ID = 'ad16eda6ac054796bf9f348ab6733c72'
 
-    metadata = (('authorization', 'Key ' + PAT),)
+    # channel = ClarifaiChannel.get_grpc_channel()
+    # stub = service_pb2_grpc.V2Stub(channel)
 
-    userDataObject = resources_pb2.UserAppIDSet(user_id=USER_ID, app_id=APP_ID)
+    # metadata = (('authorization', 'Key ' + PAT),)
 
-    post_model_outputs_response = stub.PostModelOutputs(
-    service_pb2.PostModelOutputsRequest(
-        user_app_id=userDataObject,  # The userDataObject is created in the overview and is required when using a PAT
-        model_id=MODEL_ID,
-        version_id=MODEL_VERSION_ID,  # This is optional. Defaults to the latest model version
-        inputs=[
-            resources_pb2.Input(
-                data=resources_pb2.Data(
-                    text=resources_pb2.Text(
-                        raw=prompt
-                    )
-                )
-            )
-        ]
-    ),
-    metadata=metadata
-    )
+    # userDataObject = resources_pb2.UserAppIDSet(user_id=USER_ID, app_id=APP_ID)
 
-    if post_model_outputs_response.status.code != status_code_pb2.SUCCESS:
-        print(post_model_outputs_response.status)
-        raise Exception(f"Post model outputs failed, status: {post_model_outputs_response.status.description}")
+    # post_model_outputs_response = stub.PostModelOutputs(
+    # service_pb2.PostModelOutputsRequest(
+    #     user_app_id=userDataObject,  # The userDataObject is created in the overview and is required when using a PAT
+    #     model_id=MODEL_ID,
+    #     version_id=MODEL_VERSION_ID,  # This is optional. Defaults to the latest model version
+    #     inputs=[
+    #         resources_pb2.Input(
+    #             data=resources_pb2.Data(
+    #                 text=resources_pb2.Text(
+    #                     raw=prompt
+    #                 )
+    #             )
+    #         )
+    #     ]
+    # ),
+    # metadata=metadata
+    # )
 
-    output = post_model_outputs_response.outputs[0]
+    # if post_model_outputs_response.status.code != status_code_pb2.SUCCESS:
+    #     print(post_model_outputs_response.status)
+    #     raise Exception(f"Post model outputs failed, status: {post_model_outputs_response.status.description}")
 
-    reply = output.data.text.raw
+    # output = post_model_outputs_response.outputs[0]
+
+    # reply = output.data.text.raw
+
+
+    clarifai_llm = Clarifai(pat=PAT, user_id=USER_ID, app_id=APP_ID, model_id=MODEL_ID)
+
+    template = """Question: {prompt}
+    ...
+    ... Answer: Let's think step by step."""
+
+    prompt = PromptTemplate(template=template, input_variables=["prompt"])
+
+    llm_chain = LLMChain(prompt=prompt, llm=clarifai_llm)
+
+    reply = llm_chain.run(text_input)
+
     return reply
 
 @st.cache_resource(show_spinner=False)

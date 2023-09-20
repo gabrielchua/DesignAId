@@ -70,13 +70,13 @@ def generate_user_journey_prompt():
 
         We are now at the EMPATHIZE stage. 
 
-        Generate a possible user journey.
+        Generate a possible user journey for the USER.
 
-        Format your reply as mermaid javascript. It should be a vertical flowchart. 
+        Format your reply as mermaid javascript.
 
         Your reply is only code as is, to be run directly. Do not include any explanations, or any code block.
 
-        Your reply should begin with "graph TB"
+        Your reply should begin with "flowchart TD"
 
         """
     

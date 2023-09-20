@@ -132,7 +132,7 @@ if st.session_state['generated'] == 0:
                     failed += nsfw(st.session_state[f'q{q_num}_default_val'])
 
             if failed == 0:
-                with st.spinner('Starting up my enginges. Please give me about 3 mins to think about your project...'):
+                with st.spinner('Starting up my engines. Please give me about 3 mins to think about your project...'):
 
                     with open("sample-data/user_comments.json", 'r') as json_file:
                         q8_file = json.load(json_file)
@@ -160,7 +160,6 @@ if st.session_state['generated'] == 0:
                         value=f"{st.session_state['q3_default_val']}")
     q4 = col1.text_area("Q4: What are some possible root causes?",
                         value=f"{st.session_state['q4_default_val']}")
-    col2.markdown("#### Optional Questions")
     q5 = col2.text_area("Q5: What are your prelim solutions?",
                         value=f"{st.session_state['q5_default_val']}")
     q6 = col2.text_area("Q6: Have there been previous attempts?",

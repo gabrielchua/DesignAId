@@ -18,7 +18,8 @@ def generate_dt_prompt(stage, testing=False):
 
         Specific to the {stage} stage, provide some commentary about the importance of this step and guiding questions the participant should think about.
 
-        If we are at the DEFINE step, include 5 possible problem statements based on the information provided.
+        ONLY if I say that we are at the DEFINE step, include 5 possible problem statements based on the information provided.
+        IF We are in the other 4 stages, do not include possible problem statements.
 
         Suggest common design thinking frameworks that may be relevant to the {stage} stage. Your commenary can leverage this framework.
 

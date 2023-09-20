@@ -150,8 +150,8 @@ if st.session_state['generated'] == 0:
 
 
     # Form
+    st.markdown("#### Please fill up the below")
     col1, col2 = st.columns(2)
-    col1.markdown("#### Please fill up the below")
     q1 = col1.text_area("Q1: What is your role?", 
                          value=f"{st.session_state['q1_default_val']}")
     q2= col1.text_area("Q2: Who is your target audience?",

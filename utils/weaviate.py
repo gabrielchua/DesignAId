@@ -8,7 +8,7 @@ open_ai_key = st.secrets["openai_key"]
 
 def set_up_weaviate():
     client = weaviate.Client(
-        url = "https://st-hackathon-gab-7wqpfi7g.weaviate.network",  
+        url = "https://streamlit-hackathon-kvxr2loy.weaviate.network",  
         auth_client_secret=weaviate.AuthApiKey(api_key=weaviate_key),
         additional_headers = {
         "X-OpenAI-Api-Key": open_ai_key 
@@ -31,7 +31,7 @@ def set_up_weaviate():
 def load_data_to_weaviate(data):
 
     client = weaviate.Client(
-        url = "https://st-hackathon-gab-7wqpfi7g.weaviate.network",  
+        url = "https://streamlit-hackathon-kvxr2loy.weaviate.network",  
         auth_client_secret=weaviate.AuthApiKey(api_key=weaviate_key),
         additional_headers = {
         "X-OpenAI-Api-Key": open_ai_key 
@@ -54,7 +54,7 @@ def load_data_to_weaviate(data):
 
 def query_weaviate(query):
     client = weaviate.Client(
-        url = "https://st-hackathon-gab-7wqpfi7g.weaviate.network",  
+        url = "https://streamlit-hackathon-kvxr2loy.weaviate.network",  
         auth_client_secret=weaviate.AuthApiKey(api_key=weaviate_key),
         additional_headers = {
         "X-OpenAI-Api-Key": open_ai_key 
@@ -74,7 +74,7 @@ def query_weaviate(query):
 
 def clear_weviate():
     client = weaviate.Client(
-        url = "https://st-hackathon-gab-7wqpfi7g.weaviate.network",  
+        url = "https://streamlit-hackathon-kvxr2loy.weaviate.network",  
         auth_client_secret=weaviate.AuthApiKey(api_key=weaviate_key),
         additional_headers = {
         "X-OpenAI-Api-Key": open_ai_key 
